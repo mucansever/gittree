@@ -15,7 +15,13 @@ type Tree struct {
 }
 
 func MakeTree(branches map[string]map[string]bool) Tree {
-	root := ""
+	root := "."
+	allBranches := make(map[string]bool)
+	for branch, _ := range branches {
+		allBranches[branch] = true
+	}
+	branches[root] = allBranches
+
 	nodes := make(map[string]*Node)
 	for branch, _ := range branches {
 		nodes[branch] = &Node{branch, []*Node{}}
@@ -27,7 +33,6 @@ func MakeTree(branches map[string]map[string]bool) Tree {
 			if len(children) == 0 {
 				emptyBranches[branch] = true
 				delete(branches, branch)
-				root = branch // last to be removed will be master
 			}
 		}
 
@@ -49,14 +54,15 @@ func MakeTree(branches map[string]map[string]bool) Tree {
 	return Tree{nodes[root]}
 }
 
-func (tree Tree) Print(head string) {
-	printDfs(*tree.root, 0, head)
+func (tree* Tree) Print() {
+	printDfs(*tree.root, -1)
 }
 
-func printDfs(node Node, level int, head string) {
-	fmt.Printf(strings.Repeat("  ", level) + node.name[11:])
-	if node.name == head { fmt.Println("*") } else { fmt.Println(" ") }
+func printDfs(node Node, level int) {
+	if level >= 0 {
+		fmt.Println(strings.Repeat("  ", level) + node.name)
+	}
 	for _, child := range node.children {
-		printDfs(*child, level+1, head)
+		printDfs(*child, level+1)
 	}
 }

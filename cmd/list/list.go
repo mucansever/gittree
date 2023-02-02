@@ -2,6 +2,7 @@ package list
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -52,6 +53,9 @@ func listBranches(path string) {
 
 		commits = append(commits, commit)
 		branchName := ref.Name().String()
+		if branchName == head { branchName += "*" }
+		branchName = strings.TrimPrefix(branchName, "refs/heads/")
+		
 		branchNames = append(branchNames, branchName)
 		branchChildren[branchName] = make(map[string]bool)
 	}
@@ -72,7 +76,7 @@ func listBranches(path string) {
 	}
 
 	tree := MakeTree(branchChildren)
-	tree.Print(head)
+	tree.Print()
 }
 
 func init() {

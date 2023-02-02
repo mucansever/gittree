@@ -9,11 +9,11 @@ import (
 
 var (
 	rootCmd = &cobra.Command{
-	Use:   "gittree",
-	Short: "List branches of a git repository in a tree structure",
-	Long: ``,
-	Run: func(cmd *cobra.Command, args []string) { 
-		list.ListCmd.Run(cmd, args)
+		Use:   "gittree",
+		Short: "List branches of a git repository in a tree structure",
+		Long: ``,
+		Run: func(cmd *cobra.Command, args []string) { 
+			list.ListCmd.Run(cmd, args)
 		},
 	}
 )
@@ -29,9 +29,11 @@ func addCommands() {
 	rootCmd.AddCommand(list.ListCmd)
 }
 
-func init() {
-	addCommands()
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+func addFlags() {
+	rootCmd.PersistentFlags().StringVarP(&list.Path, "path", "p", ".", "Path to the git repository")
 }
 
-
+func init() {
+	addCommands()
+	addFlags()
+}

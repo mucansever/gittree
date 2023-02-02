@@ -9,12 +9,13 @@ import (
 )
 
 var (
+	Path string
 	ListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List branches of a git repository in a tree structure",
 	Long: ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		listBranches(".")	
+		listBranches(Path)	
 		},
 	}
 

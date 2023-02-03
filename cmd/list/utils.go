@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-type Node struct{
-	name string
+type Node struct {
+	name     string
 	children []*Node
 }
 
@@ -14,16 +14,24 @@ type Tree struct {
 	root *Node
 }
 
+// CheckIfError panics if the error is not nil.
+func CheckIfError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+// MakeTree creates a tree from a map of branch names to their descendants.
 func MakeTree(branches map[string]map[string]bool) Tree {
 	root := "."
 	allBranches := make(map[string]bool)
-	for branch, _ := range branches {
+	for branch := range branches {
 		allBranches[branch] = true
 	}
 	branches[root] = allBranches
 
 	nodes := make(map[string]*Node)
-	for branch, _ := range branches {
+	for branch := range branches {
 		nodes[branch] = &Node{branch, []*Node{}}
 	}
 
@@ -54,7 +62,8 @@ func MakeTree(branches map[string]map[string]bool) Tree {
 	return Tree{nodes[root]}
 }
 
-func (tree* Tree) Print() {
+// Print prints the tree in a DFS manner.
+func (tree *Tree) Print() {
 	printDfs(*tree.root, -1)
 }
 

@@ -11,8 +11,8 @@ var (
 	rootCmd = &cobra.Command{
 		Use:   "gittree",
 		Short: "List branches of a git repository in a tree structure",
-		Long: ``,
-		Run: func(cmd *cobra.Command, args []string) { 
+		Long:  ``,
+		Run: func(cmd *cobra.Command, args []string) {
 			list.ListCmd.Run(cmd, args)
 		},
 	}

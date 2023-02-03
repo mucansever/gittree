@@ -10,33 +10,29 @@ import (
 )
 
 var (
-	Path string
+	Path    string
 	ListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List branches of a git repository in a tree structure",
-	Long: ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		listBranches(Path)	
+		Use:   "list",
+		Short: "List branches of a git repository in a tree structure",
+		Long:  ``,
+		Run: func(cmd *cobra.Command, args []string) {
+			listBranches(Path)
 		},
 	}
 
 	repositoryErrorText = "Oops, something went wrong. Please make sure you are in a git repository."
 )
 
-func CheckIfError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func listBranches(path string) {
 	defer func() {
-		if x := recover(); x != nil { fmt.Println(repositoryErrorText) }
+		if x := recover(); x != nil {
+			fmt.Println(repositoryErrorText)
+		}
 	}()
 
 	repo, err := git.PlainOpen(path)
 	CheckIfError(err)
-	
+
 	headRef, err := repo.Head()
 	CheckIfError(err)
 	head := headRef.Name().String()
@@ -53,25 +49,31 @@ func listBranches(path string) {
 
 		commits = append(commits, commit)
 		branchName := ref.Name().String()
-		if branchName == head { branchName += "*" }
+		if branchName == head {
+			branchName += "*"
+		}
 		branchName = strings.TrimPrefix(branchName, "refs/heads/")
-		
+
 		branchNames = append(branchNames, branchName)
 		branchChildren[branchName] = make(map[string]bool)
 	}
 
-	for i := 0; i<len(commits); i++ {
-		for j := i+1; j<len(commits); j++ {
+	for i := 0; i < len(commits); i++ {
+		for j := i + 1; j < len(commits); j++ {
 			if commits[i].Hash == commits[j].Hash {
 				continue
 			}
 			isAncestor, err := commits[i].IsAncestor(commits[j])
 			CheckIfError(err)
-			if isAncestor { branchChildren[branchNames[i]][branchNames[j]] = true }
+			if isAncestor {
+				branchChildren[branchNames[i]][branchNames[j]] = true
+			}
 
 			isAncestor, err = commits[j].IsAncestor(commits[i])
 			CheckIfError(err)
-			if isAncestor { branchChildren[branchNames[j]][branchNames[i]] = true }
+			if isAncestor {
+				branchChildren[branchNames[j]][branchNames[i]] = true
+			}
 		}
 	}
 

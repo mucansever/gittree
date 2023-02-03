@@ -1,5 +1,5 @@
 builds:
-  - binary: gittree
+  - binary: bin/gittree
     goos:
       - darwin
       - linux

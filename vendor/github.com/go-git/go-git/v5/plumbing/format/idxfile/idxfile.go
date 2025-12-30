@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"io"
 	"sort"
+	"sync"
 
 	encbin "encoding/binary"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/hash"
 )
 
 const (
@@ -53,11 +55,12 @@ type MemoryIndex struct {
 	Offset32         [][]byte
 	CRC32            [][]byte
 	Offset64         []byte
-	PackfileChecksum [20]byte
-	IdxChecksum      [20]byte
+	PackfileChecksum [hash.Size]byte
+	IdxChecksum      [hash.Size]byte
 
-	offsetHash       map[int64]plumbing.Hash
-	offsetHashIsFull bool
+	offsetHash      map[int64]plumbing.Hash
+	offsetBuildOnce sync.Once
+	mu              sync.RWMutex
 }
 
 var _ Index = (*MemoryIndex)(nil)
@@ -125,13 +128,13 @@ func (idx *MemoryIndex) FindOffset(h plumbing.Hash) (int64, error) {
 
 	offset := idx.getOffset(k, i)
 
-	if !idx.offsetHashIsFull {
-		// Save the offset for reverse lookup
-		if idx.offsetHash == nil {
-			idx.offsetHash = make(map[int64]plumbing.Hash)
-		}
-		idx.offsetHash[int64(offset)] = h
+	// Save the offset for reverse lookup
+	idx.mu.Lock()
+	if idx.offsetHash == nil {
+		idx.offsetHash = make(map[int64]plumbing.Hash)
 	}
+	idx.offsetHash[int64(offset)] = h
+	idx.mu.Unlock()
 
 	return int64(offset), nil
 }
@@ -172,20 +175,17 @@ func (idx *MemoryIndex) FindHash(o int64) (plumbing.Hash, error) {
 	var hash plumbing.Hash
 	var ok bool
 
-	if idx.offsetHash != nil {
-		if hash, ok = idx.offsetHash[o]; ok {
-			return hash, nil
-		}
+	var genErr error
+	idx.offsetBuildOnce.Do(func() {
+		genErr = idx.genOffsetHash()
+	})
+	if genErr != nil {
+		return plumbing.ZeroHash, genErr
 	}
 
-	// Lazily generate the reverse offset/hash map if required.
-	if !idx.offsetHashIsFull || idx.offsetHash == nil {
-		if err := idx.genOffsetHash(); err != nil {
-			return plumbing.ZeroHash, err
-		}
-
-		hash, ok = idx.offsetHash[o]
-	}
+	idx.mu.RLock()
+	hash, ok = idx.offsetHash[o]
+	idx.mu.RUnlock()
 
 	if !ok {
 		return plumbing.ZeroHash, plumbing.ErrObjectNotFound
@@ -201,8 +201,7 @@ func (idx *MemoryIndex) genOffsetHash() error {
 		return err
 	}
 
-	idx.offsetHash = make(map[int64]plumbing.Hash, count)
-	idx.offsetHashIsFull = true
+	offsetHash := make(map[int64]plumbing.Hash, count)
 
 	var hash plumbing.Hash
 	i := uint32(0)
@@ -211,10 +210,14 @@ func (idx *MemoryIndex) genOffsetHash() error {
 		for secondLevel := uint32(0); i < fanoutValue; i++ {
 			copy(hash[:], idx.Names[mappedFirstLevel][secondLevel*objectIDLength:])
 			offset := int64(idx.getOffset(mappedFirstLevel, int(secondLevel)))
-			idx.offsetHash[offset] = hash
+			offsetHash[offset] = hash
 			secondLevel++
 		}
 	}
+
+	idx.mu.Lock()
+	idx.offsetHash = offsetHash
+	idx.mu.Unlock()
 
 	return nil
 }

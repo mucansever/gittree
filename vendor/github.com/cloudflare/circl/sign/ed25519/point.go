@@ -2,11 +2,13 @@ package ed25519
 
 import fp "github.com/cloudflare/circl/math/fp25519"
 
-type pointR1 struct{ x, y, z, ta, tb fp.Elt }
-type pointR2 struct {
-	pointR3
-	z2 fp.Elt
-}
+type (
+	pointR1 struct{ x, y, z, ta, tb fp.Elt }
+	pointR2 struct {
+		pointR3
+		z2 fp.Elt
+	}
+)
 type pointR3 struct{ addYX, subYX, dt2 fp.Elt }
 
 func (P *pointR1) neg() {
@@ -162,7 +164,7 @@ func (P *pointR1) isEqual(Q *pointR1) bool {
 	fp.Mul(r, r, &P.z)
 	fp.Sub(l, l, r)
 	b = b && fp.IsZero(l)
-	return b
+	return b && !fp.IsZero(&P.z) && !fp.IsZero(&Q.z)
 }
 
 func (P *pointR3) neg() {

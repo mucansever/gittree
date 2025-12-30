@@ -1,39 +1,25 @@
 package cmd
 
 import (
-	"os"
-
-	"github.com/mucansever/gittree/cmd/list"
 	"github.com/spf13/cobra"
+
+	"github.com/mucansever/gittree/internal/list"
 )
 
-var (
-	rootCmd = &cobra.Command{
-		Use:   "gittree",
-		Short: "List branches of a git repository in a tree structure",
-		Long:  ``,
-		Run: func(cmd *cobra.Command, args []string) {
-			list.ListCmd.Run(cmd, args)
-		},
-	}
-)
-
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
-	}
+var rootCmd = &cobra.Command{
+	Use:   "gittree",
+	Short: "List branches of a git repository in a tree structure",
+	Long: `gittree visualizes git branches in a hierarchical tree structure,
+showing ancestor-descendant relationships between branches.`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
-func addCommands() {
-	rootCmd.AddCommand(list.ListCmd)
-}
-
-func addFlags() {
-	rootCmd.PersistentFlags().StringVarP(&list.Path, "path", "p", ".", "Path to the git repository")
+// Execute runs the root command.
+func Execute() error {
+	return rootCmd.Execute()
 }
 
 func init() {
-	addCommands()
-	addFlags()
+	rootCmd.AddCommand(list.NewListCommand())
 }

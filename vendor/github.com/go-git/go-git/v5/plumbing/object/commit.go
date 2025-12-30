@@ -17,13 +17,24 @@ import (
 )
 
 const (
-	beginpgp  string = "-----BEGIN PGP SIGNATURE-----"
-	endpgp    string = "-----END PGP SIGNATURE-----"
-	headerpgp string = "gpgsig"
+	beginpgp       string = "-----BEGIN PGP SIGNATURE-----"
+	endpgp         string = "-----END PGP SIGNATURE-----"
+	headerpgp      string = "gpgsig"
+	headerencoding string = "encoding"
+
+	// https://github.com/git/git/blob/bcb6cae2966cc407ca1afc77413b3ef11103c175/Documentation/gitformat-signature.txt#L153
+	// When a merge commit is created from a signed tag, the tag is embedded in
+	// the commit with the "mergetag" header.
+	headermergetag string = "mergetag"
+
+	defaultUtf8CommitMessageEncoding MessageEncoding = "UTF-8"
 )
 
 // Hash represents the hash of an object
 type Hash plumbing.Hash
+
+// MessageEncoding represents the encoding of a commit
+type MessageEncoding string
 
 // Commit points to a single tree, marking it as what the project looked like
 // at a certain point in time. It contains meta-information about that point
@@ -38,6 +49,9 @@ type Commit struct {
 	// Committer is the one performing the commit, might be different from
 	// Author.
 	Committer Signature
+	// MergeTag is the embedded tag object when a merge commit is created by
+	// merging a signed tag.
+	MergeTag string
 	// PGPSignature is the PGP signature of the commit.
 	PGPSignature string
 	// Message is the commit message, contains arbitrary text.
@@ -46,8 +60,55 @@ type Commit struct {
 	TreeHash plumbing.Hash
 	// ParentHashes are the hashes of the parent commits of the commit.
 	ParentHashes []plumbing.Hash
+	// Encoding is the encoding of the commit.
+	Encoding MessageEncoding
+	// List of extra headers of the commit
+	ExtraHeaders []ExtraHeader
 
 	s storer.EncodedObjectStorer
+}
+
+// ExtraHeader holds any non-standard header
+type ExtraHeader struct {
+	// Header name
+	Key string
+	// Value of the header
+	Value string
+}
+
+// Implement fmt.Formatter for ExtraHeader
+func (h ExtraHeader) Format(f fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		fmt.Fprintf(f, "ExtraHeader{Key: %v, Value: %v}", h.Key, h.Value)
+	default:
+		fmt.Fprintf(f, "%s", h.Key)
+		if len(h.Value) > 0 {
+			fmt.Fprint(f, " ")
+			// Content may be spread on multiple lines, if so we need to
+			// prepend each of them with a space for "continuation".
+			value := strings.TrimSuffix(h.Value, "\n")
+			lines := strings.Split(value, "\n")
+			fmt.Fprint(f, strings.Join(lines, "\n "))
+		}
+	}
+}
+
+// Parse an extra header and indicate whether it may be continue on the next line
+func parseExtraHeader(line []byte) (ExtraHeader, bool) {
+	split := bytes.SplitN(line, []byte{' '}, 2)
+
+	out := ExtraHeader {
+		Key: string(bytes.TrimRight(split[0], "\n")),
+		Value: "",
+	}
+
+	if len(split) == 2 {
+		out.Value += string(split[1])
+		return out, true
+	} else {
+		return out, false
+	}
 }
 
 // GetCommit gets a commit from an object storer and decodes it.
@@ -173,6 +234,7 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 	}
 
 	c.Hash = o.Hash()
+	c.Encoding = defaultUtf8CommitMessageEncoding
 
 	reader, err := o.Reader()
 	if err != nil {
@@ -184,12 +246,24 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 	defer sync.PutBufioReader(r)
 
 	var message bool
+	var mergetag bool
 	var pgpsig bool
 	var msgbuf bytes.Buffer
+	var extraheader *ExtraHeader = nil
 	for {
 		line, err := r.ReadBytes('\n')
 		if err != nil && err != io.EOF {
 			return err
+		}
+
+		if mergetag {
+			if len(line) > 0 && line[0] == ' ' {
+				line = bytes.TrimLeft(line, " ")
+				c.MergeTag += string(line)
+				continue
+			} else {
+				mergetag = false
+			}
 		}
 
 		if pgpsig {
@@ -202,7 +276,19 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 			}
 		}
 
+		if extraheader != nil {
+			if len(line) > 0 && line[0] == ' ' {
+				extraheader.Value += string(line[1:])
+				continue
+			} else {
+				extraheader.Value = strings.TrimRight(extraheader.Value, "\n")
+				c.ExtraHeaders = append(c.ExtraHeaders, *extraheader)
+				extraheader = nil
+			}
+		}
+
 		if !message {
+			original_line := line
 			line = bytes.TrimSpace(line)
 			if len(line) == 0 {
 				message = true
@@ -225,9 +311,21 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 				c.Author.Decode(data)
 			case "committer":
 				c.Committer.Decode(data)
+			case headermergetag:
+				c.MergeTag += string(data) + "\n"
+				mergetag = true
+			case headerencoding:
+				c.Encoding = MessageEncoding(data)
 			case headerpgp:
 				c.PGPSignature += string(data) + "\n"
 				pgpsig = true
+			default:
+				h, maybecontinued := parseExtraHeader(original_line)
+				if maybecontinued {
+					extraheader = &h
+				} else {
+					c.ExtraHeaders = append(c.ExtraHeaders, h)
+				}
 			}
 		} else {
 			msgbuf.Write(line)
@@ -284,6 +382,35 @@ func (c *Commit) encode(o plumbing.EncodedObject, includeSig bool) (err error) {
 
 	if err = c.Committer.Encode(w); err != nil {
 		return err
+	}
+
+	if c.MergeTag != "" {
+		if _, err = fmt.Fprint(w, "\n"+headermergetag+" "); err != nil {
+			return err
+		}
+
+		// Split tag information lines and re-write with a left padding and
+		// newline. Use join for this so it's clear that a newline should not be
+		// added after this section. The newline will be added either as part of
+		// the PGP signature or the commit message.
+		mergetag := strings.TrimSuffix(c.MergeTag, "\n")
+		lines := strings.Split(mergetag, "\n")
+		if _, err = fmt.Fprint(w, strings.Join(lines, "\n ")); err != nil {
+			return err
+		}
+	}
+
+	if string(c.Encoding) != "" && c.Encoding != defaultUtf8CommitMessageEncoding {
+		if _, err = fmt.Fprintf(w, "\n%s %s", headerencoding, c.Encoding); err != nil {
+			return err
+		}
+	}
+
+	for _, header := range c.ExtraHeaders {
+		
+		if _, err = fmt.Fprintf(w, "\n%s", header); err != nil {
+			return err
+		}
 	}
 
 	if c.PGPSignature != "" && includeSig {
@@ -374,6 +501,17 @@ func (c *Commit) Verify(armoredKeyRing string) (*openpgp.Entity, error) {
 	}
 
 	return openpgp.CheckArmoredDetachedSignature(keyring, er, signature, nil)
+}
+
+// Less defines a compare function to determine which commit is 'earlier' by:
+// - First use Committer.When
+// - If Committer.When are equal then use Author.When
+// - If Author.When also equal then compare the string value of the hash
+func (c *Commit) Less(rhs *Commit) bool {
+	return c.Committer.When.Before(rhs.Committer.When) ||
+		(c.Committer.When.Equal(rhs.Committer.When) &&
+			(c.Author.When.Before(rhs.Author.When) ||
+				(c.Author.When.Equal(rhs.Author.When) && bytes.Compare(c.Hash[:], rhs.Hash[:]) < 0)))
 }
 
 func indent(t string) string {

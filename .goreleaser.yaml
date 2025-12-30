@@ -1,3 +1,5 @@
+version: 2
+
 builds:
   - binary: bin/gittree
     goos:
@@ -18,10 +20,9 @@ universal_binaries:
   - replace: true
 
 brews:
-  -
-    name: gittree
+  - name: gittree
     homepage: https://github.com/mucansever/gittree
-    tap:
+    repository:
       owner: mucansever
       name: homebrew-gittree
     commit_author:

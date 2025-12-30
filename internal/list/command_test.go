@@ -110,7 +110,6 @@ func createTestRepo(t *testing.T) string {
 	_, err = w.Add("README.md")
 	require.NoError(t, err)
 
-	// FIX: Provide an explicit Author and Committer
 	_, err = w.Commit("Initial commit", &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  "Test User",

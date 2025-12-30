@@ -303,7 +303,6 @@ func createTestRepo(t *testing.T) string {
 	_, err = w.Add("README.md")
 	require.NoError(t, err)
 
-	// FIX: Provide an explicit Author and Committer
 	_, err = w.Commit("Initial commit", &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  "Test User",
@@ -360,6 +359,12 @@ func commitFile(t *testing.T, repo *git.Repository, filename, content string) {
 	_, err = w.Add(filename)
 	require.NoError(t, err)
 
-	_, err = w.Commit("Add "+filename, &git.CommitOptions{})
+	_, err = w.Commit("Add "+filename, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Test User",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
 	require.NoError(t, err)
 }

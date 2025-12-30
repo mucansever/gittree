@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -108,7 +110,14 @@ func createTestRepo(t *testing.T) string {
 	_, err = w.Add("README.md")
 	require.NoError(t, err)
 
-	_, err = w.Commit("Initial commit", &git.CommitOptions{})
+	// FIX: Provide an explicit Author and Committer
+	_, err = w.Commit("Initial commit", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Test User",
+			Email: "test@example.com",
+			When:  time.Now(),
+		},
+	})
 	require.NoError(t, err)
 
 	return dir

@@ -2,7 +2,7 @@
 
 `git branch -l` in tree view. 
 
-You can see which branch was created from which branch in a tree format, making the whole merging process a lot more straightforward.
+You can see which branch was created from which branch in a tree format, and checkout using the terminal UI.
 
 Note that not all git branch relations will result in a tree due to cycles. I didn't handle this edge case just yet.
 
@@ -14,7 +14,7 @@ brew install mucansever/gittree/gittree
 
 ## Usage
 
-Run `gittree list` inside your repo.
+Run `gittree`
 ```bash
 .
 └── main (3d ago)

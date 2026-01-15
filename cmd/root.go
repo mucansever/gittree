@@ -13,6 +13,7 @@ var rootCmd = &cobra.Command{
 showing ancestor-descendant relationships between branches.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	RunE:          runUI,
 }
 
 // Execute runs the root command.
@@ -22,4 +23,5 @@ func Execute() error {
 
 func init() {
 	rootCmd.AddCommand(list.NewListCommand())
+	rootCmd.Flags().StringVarP(&uiPath, "path", "p", ".", "Path to the git repository")
 }

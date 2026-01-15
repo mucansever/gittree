@@ -124,6 +124,22 @@ func (r *Repository) GetBranchRelationships(branches []Branch) (map[string]map[s
 	return relationships, nil
 }
 
+func (r *Repository) Checkout(branchName string) error {
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("getting worktree: %w", err)
+	}
+
+	err = w.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.ReferenceName(refPrefix + branchName),
+	})
+	if err != nil {
+		return fmt.Errorf("checkout %s: %w", branchName, err)
+	}
+
+	return nil
+}
+
 func normalizeBranchName(refName string) string {
 	return strings.TrimPrefix(refName, refPrefix)
 }

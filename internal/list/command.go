@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -68,7 +69,12 @@ func runList(opts *Options) error {
 		return fmt.Errorf("failed to analyze branch relationships: %w", err)
 	}
 
-	builder := tree.NewBuilder(relationships)
+	meta := make(map[string]time.Time)
+	for _, b := range branches {
+		meta[b.Name] = b.Commit.Committer.When
+	}
+
+	builder := tree.NewBuilder(relationships, meta)
 	t, err := builder.Build(currentBranch)
 	if err != nil {
 		return fmt.Errorf("failed to build tree: %w", err)

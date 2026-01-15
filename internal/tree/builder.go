@@ -2,6 +2,7 @@ package tree
 
 import (
 	"errors"
+	"time"
 )
 
 var (
@@ -12,11 +13,13 @@ const rootNodeName = "."
 
 type Builder struct {
 	relationships map[string]map[string]bool
+	meta          map[string]time.Time
 }
 
-func NewBuilder(relationships map[string]map[string]bool) *Builder {
+func NewBuilder(relationships map[string]map[string]bool, meta map[string]time.Time) *Builder {
 	return &Builder{
 		relationships: relationships,
+		meta:          meta,
 	}
 }
 
@@ -30,6 +33,10 @@ func (b *Builder) Build(currentBranch string) (*Tree, error) {
 		if children, exists := working[currentBranch]; exists {
 			working[markedBranch] = children
 			delete(working, currentBranch)
+
+			if t, ok := b.meta[currentBranch]; ok {
+				b.meta[markedBranch] = t
+			}
 
 			for branch := range working {
 				if working[branch][currentBranch] {
@@ -57,7 +64,7 @@ func (b *Builder) Build(currentBranch string) (*Tree, error) {
 
 	nodes := make(map[string]*Node)
 	for branch := range working {
-		nodes[branch] = NewNode(branch)
+		nodes[branch] = NewNode(branch, b.meta[branch])
 	}
 
 	if err := b.buildHierarchy(working, nodes); err != nil {

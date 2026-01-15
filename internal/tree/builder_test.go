@@ -104,7 +104,7 @@ func TestBuilder_Build(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewBuilder(tt.relationships)
+			builder := NewBuilder(tt.relationships, nil)
 			tree, err := builder.Build(tt.currentBranch)
 
 			if tt.wantErr != nil {
@@ -151,7 +151,7 @@ func TestBuilder_Build_Transitive(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewBuilder(tt.relationships)
+			builder := NewBuilder(tt.relationships, nil)
 			tree, err := builder.Build(tt.currentBranch)
 			require.NoError(t, err)
 			tt.check(t, tree)
@@ -165,7 +165,7 @@ func TestBuilder_CyclicDependency(t *testing.T) {
 		"branch2": {"branch1": true}, // cycle
 	}
 
-	builder := NewBuilder(relationships)
+	builder := NewBuilder(relationships, nil)
 	_, err := builder.Build("")
 
 	assert.ErrorIs(t, err, ErrCyclicDependency)
@@ -177,7 +177,7 @@ func TestBuilder_copyRelationships(t *testing.T) {
 		"feature": {},
 	}
 
-	builder := NewBuilder(original)
+	builder := NewBuilder(original, nil)
 	copy := builder.copyRelationships()
 
 	copy["master"]["new"] = true
@@ -194,7 +194,7 @@ func TestBuilder_findLeafNodes(t *testing.T) {
 		"develop": {},
 	}
 
-	builder := NewBuilder(nil)
+	builder := NewBuilder(nil, nil)
 	leaves := builder.findLeafNodes(relationships)
 
 	assert.Len(t, leaves, 2)

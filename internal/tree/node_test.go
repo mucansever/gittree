@@ -2,12 +2,13 @@ package tree
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNode(t *testing.T) {
-	node := NewNode("test")
+	node := NewNode("test", time.Time{})
 
 	assert.Equal(t, "test", node.Name)
 	assert.NotNil(t, node.Children)
@@ -15,9 +16,9 @@ func TestNewNode(t *testing.T) {
 }
 
 func TestNode_AddChild(t *testing.T) {
-	parent := NewNode("parent")
-	child1 := NewNode("child1")
-	child2 := NewNode("child2")
+	parent := NewNode("parent", time.Time{})
+	child1 := NewNode("child1", time.Time{})
+	child2 := NewNode("child2", time.Time{})
 
 	parent.AddChild(child1)
 	parent.AddChild(child2)

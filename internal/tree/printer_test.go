@@ -3,6 +3,7 @@ package tree
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,11 +20,11 @@ func TestPrinter_Print(t *testing.T) {
 				Root: &Node{
 					Name: "master",
 					Children: []*Node{
-						{Name: "feature", Children: []*Node{}},
+						{Name: "feature", Children: []*Node{}, LastCommit: time.Now().Add(-2 * time.Hour)},
 					},
 				},
 			},
-			want: "master\n└── feature\n",
+			want: "master\n└── feature (2h ago)\n",
 		},
 		{
 			name: "branching tree",
@@ -61,18 +62,19 @@ func TestPrinter_Print(t *testing.T) {
 				Root: &Node{
 					Name: "main",
 					Children: []*Node{
-						{Name: "fix/important-bug", Children: []*Node{}},
+						{Name: "fix/important-bug", Children: []*Node{}, LastCommit: time.Now().Add(-5 * time.Hour)},
 						{
 							Name: "feat/feature-1",
 							Children: []*Node{
-								{Name: "chore/document-change*", Children: []*Node{}},
+								{Name: "chore/document-change*", Children: []*Node{}, LastCommit: time.Now().Add(-30 * time.Hour)},
 							},
+							LastCommit: time.Now().Add(-28 * time.Hour),
 						},
-						{Name: "chore/no-commits-yet", Children: []*Node{}},
+						{Name: "chore/no-commits-yet", Children: []*Node{}, LastCommit: time.Now().Add(-49 * time.Hour)},
 					},
 				},
 			},
-			want: "main\n├── fix/important-bug\n├── feat/feature-1\n│   └── chore/document-change*\n└── chore/no-commits-yet\n",
+			want: "main\n├── fix/important-bug (5h ago)\n├── feat/feature-1 (1d ago)\n│   └── chore/document-change* (1d ago)\n└── chore/no-commits-yet (2d ago)\n",
 		},
 		{
 			name: "nil tree",

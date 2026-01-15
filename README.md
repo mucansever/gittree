@@ -17,23 +17,23 @@ brew install mucansever/gittree/gittree
 Run `gittree list` inside your repo.
 ```bash
 .
-└── main
-    ├── fix/important-bug
-    └── feat/feature-1
-        └── chore/document-change*
+└── main (3d ago)
+    ├── fix/important-bug (4h ago)
+    └── feat/feature-1 (3h ago)
+        └── chore/document-change* (30m ago)
 ```
 
 If there is two of the same branch, all the children are duplicated. In below example, `feat/no-commit-branch` is a new branch from `main` without any commits.
 ```bash
 .
-├── main
-│   ├── fix/important-bug
-│   └── feat/feature-1
-│       └── chore/document-change
-└── feat/no-commit-branch*
-    ├── fix/important-bug
-    └── feat/feature-1
-        └── chore/document-change
+├── main (3d ago)
+│   ├── fix/important-bug (4h ago)
+│   └── feat/feature-1 (3h ago)
+│       └── chore/document-change (30m ago)
+└── feat/no-commit-branch* (1d ago)
+    ├── fix/important-bug (4h ago)
+    └── feat/feature-1 (3h ago)
+        └── chore/document-change (30m ago)
 ```
 
 ## Improvements

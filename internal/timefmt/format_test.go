@@ -16,9 +16,9 @@ func TestRelativeTime(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "now",
+			name:     "0m",
 			diff:     30 * time.Second,
-			expected: "now",
+			expected: "0m",
 		},
 		{
 			name:     "minutes",

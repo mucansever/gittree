@@ -11,7 +11,7 @@ func RelativeTime(t time.Time) string {
 
 	switch {
 	case d < time.Minute:
-		return "now"
+		return "0m"
 	case d < time.Hour:
 		return fmt.Sprintf("%dm", int(d.Minutes()))
 	case d < 24*time.Hour:
